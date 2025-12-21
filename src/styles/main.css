@@ -29,6 +29,10 @@
   }
 }
 
+body{
+  text-autospace:normal;
+}
+
 input {
   outline: none;
 }
