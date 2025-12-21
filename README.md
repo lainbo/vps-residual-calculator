@@ -98,7 +98,6 @@ npm run preview
 构建配置：
 - **构建命令**: `npm run build`
 - **构建输出目录**: `dist`
-- **Node 版本**: 16 或更高
 
 ### 其他平台
 

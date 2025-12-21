@@ -3,12 +3,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   build: {
     // 启用代码分割和 tree shaking
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // 生产环境移除 console
-        drop_debugger: true
-      }
+    minify: 'esbuild',
+    esbuild: {
+      drop: ['console', 'debugger'], // 生产环境移除 console 和 debugger
     },
     rollupOptions: {
       output: {
