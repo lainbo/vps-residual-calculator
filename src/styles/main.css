@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Alpine.js cloak - 防止闪烁 */
+[x-cloak] {
+  display: none !important;
+}
+
+/* 自定义样式 */
+@layer components {
+  .input-field {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-md p-6;
+  }
+}
+
+/* 平滑过渡效果 */
+@layer utilities {
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+input {
+  outline: none;
+}
