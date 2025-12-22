@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "alpinejs": "^3.15.3",
+    "dayjs": "^1.11.19",
     "decimalish": "^0.1.2"
   }
 }

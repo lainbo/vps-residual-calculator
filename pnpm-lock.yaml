@@ -11,6 +11,9 @@ importers:
       alpinejs:
         specifier: ^3.15.3
         version: 3.15.3
+      dayjs:
+        specifier: ^1.11.19
+        version: 1.11.19
       decimalish:
         specifier: ^0.1.2
         version: 0.1.2
@@ -390,6 +393,9 @@ packages:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
     engines: {node: '>=4'}
     hasBin: true
+
+  dayjs@1.11.19:
+    resolution: {integrity: sha512-t5EcLVS6QPBNqM2z8fakk/NKel+Xzshgt8FFKAn+qwlD1pzZWxh0nVCrvFK7ZDb6XucZeF9z8C7CBWTRIVApAw==}
 
   decimalish@0.1.2:
     resolution: {integrity: sha512-DDsK0ToUu5ZHy4ebEL8L432g1zgSqIoCTIu+hT5gG8V7YpKfo/48g59VMkPJbqLqtPe2X0lm0XR+nfkkEJ9T0w==}
@@ -937,6 +943,8 @@ snapshots:
   commander@4.1.1: {}
 
   cssesc@3.0.0: {}
+
+  dayjs@1.11.19: {}
 
   decimalish@0.1.2: {}
 

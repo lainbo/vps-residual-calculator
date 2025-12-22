@@ -7,6 +7,7 @@ import {
   add,
   round
 } from 'decimalish'
+import dayjs from 'dayjs'
 
 /**
  * 计算剩余价值
@@ -36,7 +37,10 @@ export function calculateResidual(params) {
   try {
     // 1. 计算总周期天数
     const months = parseInt(renewalPeriod)
-    const totalDays = decimal(months * 30)
+    // 使用 dayjs 从到期日期反推周期开始日期
+    const periodStartDate = dayjs(renewalDate).subtract(months, 'month')
+    // 计算实际天数差
+    const totalDays = decimal(dayjs(renewalDate).diff(periodStartDate, 'day'))
 
     // 2. 计算续费金额的人民币价值
     const renewalAmountDecimal = decimal(parseFloat(renewalAmount))
