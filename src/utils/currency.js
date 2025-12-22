@@ -1,7 +1,5 @@
 // 使用 ExchangeRate-API 的免费服务
 const API_BASE_URL = 'https://api.exchangerate-api.com/v4/latest'
-const CACHE_KEY_PREFIX = 'exchange_rate_'
-const CACHE_DURATION = 1000 * 60 * 60 // 1小时缓存
 
 /**
  * 获取汇率
@@ -14,18 +12,11 @@ export async function getExchangeRate(currency) {
     return 1
   }
 
-  // 检查缓存
-  const cached = getCache(currency)
-  if (cached) {
-    console.log(`[汇率] 使用缓存: ${currency} = ${cached} CNY`)
-    return cached
-  }
-
   console.log(`[汇率] 正在获取 ${currency} 汇率...`)
 
   try {
-    // 发起 API 请求
-    const response = await fetch(`${API_BASE_URL}/${currency}`)
+    // 发起 API 请求 (以 CNY 为基准)
+    const response = await fetch(`${API_BASE_URL}/CNY`)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -33,15 +24,16 @@ export async function getExchangeRate(currency) {
 
     const data = await response.json()
 
-    // 提取 CNY 汇率
-    const rate = data.rates.CNY
+    // 从 CNY 到目标币种的汇率中计算倒数，得到目标币种到 CNY 的汇率
+    const cnyToTargetRate = data.rates[currency]
 
-    if (!rate) {
-      throw new Error('未找到 CNY 汇率')
+    if (!cnyToTargetRate) {
+      throw new Error(`未找到 ${currency} 汇率`)
     }
 
-    // 缓存结果
-    setCache(currency, rate)
+    // 1 目标币种 = 多少 CNY (取倒数)
+    const rate = 1 / cnyToTargetRate
+
     console.log(`[汇率] 获取成功: ${currency} = ${rate} CNY`)
 
     return rate
@@ -60,12 +52,13 @@ export async function getExchangeRate(currency) {
 async function getFallbackRate(currency) {
   console.log(`[汇率] 尝试备用API...`)
   try {
-    const response = await fetch(`https://api.exchangerate.host/latest?base=${currency}&symbols=CNY`)
+    // 备用 API 也使用 CNY 为基准
+    const response = await fetch(`https://api.exchangerate.host/latest?base=CNY&symbols=${currency}`)
     const data = await response.json()
 
-    if (data.success && data.rates.CNY) {
-      const rate = data.rates.CNY
-      setCache(currency, rate)
+    if (data.success && data.rates[currency]) {
+      // CNY 到目标币种，需要取倒数得到目标币种到 CNY
+      const rate = 1 / data.rates[currency]
       console.log(`[汇率] 备用API成功: ${currency} = ${rate} CNY`)
       return rate
     }
@@ -94,65 +87,4 @@ function getDefaultRate(currency) {
   }
 
   return defaultRates[currency] || 1
-}
-
-/**
- * 获取缓存的汇率
- */
-function getCache(currency) {
-  try {
-    const key = CACHE_KEY_PREFIX + currency
-    const cached = localStorage.getItem(key)
-
-    if (!cached) return null
-
-    const { rate, timestamp } = JSON.parse(cached)
-
-    // 检查是否过期
-    if (Date.now() - timestamp > CACHE_DURATION) {
-      localStorage.removeItem(key)
-      return null
-    }
-
-    return rate
-
-  } catch (error) {
-    return null
-  }
-}
-
-/**
- * 缓存汇率
- */
-function setCache(currency, rate) {
-  try {
-    const key = CACHE_KEY_PREFIX + currency
-    const data = {
-      rate,
-      timestamp: Date.now()
-    }
-    localStorage.setItem(key, JSON.stringify(data))
-  } catch (error) {
-    console.error('缓存失败:', error)
-  }
-}
-
-/**
- * 清除汇率缓存
- * @param {string} currency - 要清除的币种，不传则清除所有
- */
-export function clearCache(currency) {
-  if (currency) {
-    const key = CACHE_KEY_PREFIX + currency
-    localStorage.removeItem(key)
-    console.log(`[汇率] 已清除 ${currency} 缓存`)
-  } else {
-    // 清除所有汇率缓存
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith(CACHE_KEY_PREFIX)) {
-        localStorage.removeItem(key)
-      }
-    })
-    console.log(`[汇率] 已清除所有缓存`)
-  }
 }

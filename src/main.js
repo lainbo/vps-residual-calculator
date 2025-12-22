@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs'
 import { calculateResidual } from './utils/calculator'
-import { getExchangeRate, clearCache } from './utils/currency'
+import { getExchangeRate } from './utils/currency'
 
 // 全局注册 Alpine.js 组件
 document.addEventListener('alpine:init', () => {
@@ -47,18 +47,13 @@ document.addEventListener('alpine:init', () => {
     },
 
     // 获取汇率
-    async fetchExchangeRate(forceRefresh = false) {
+    async fetchExchangeRate() {
       this.exchangeRateLoading = true
       this.error = ''
 
       try {
-        // 如果强制刷新，先清除缓存
-        if (forceRefresh) {
-          clearCache(this.form.currency)
-        }
-
         const rate = await getExchangeRate(this.form.currency)
-        this.form.exchangeRate = rate.toString()
+        this.form.exchangeRate = parseFloat(rate).toFixed(4)
       } catch (err) {
         this.error = '获取汇率失败,请手动输入'
         console.error('汇率获取失败:', err)
@@ -67,9 +62,9 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
-    // 刷新汇率（清除缓存后重新获取）
+    // 刷新汇率
     refreshExchangeRate() {
-      this.fetchExchangeRate(true)
+      this.fetchExchangeRate()
     },
 
     // 计算结果
