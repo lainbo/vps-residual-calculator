@@ -2,7 +2,7 @@
   "name": "vps-residual-calculator",
   "version": "1.0.0",
   "type": "module",
-  "description": "VPS剩余价值计算器 - 精确计算VPS的剩余价值与溢价",
+  "description": "剩余价值计算器 - 精确计算服务器的剩余价值与溢价",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
