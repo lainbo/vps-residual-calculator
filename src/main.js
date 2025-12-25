@@ -44,7 +44,7 @@ document.addEventListener('alpine:init', () => {
 
       // 监听币种变化
       this.$watch('form.currency', () => {
-        this.fetchExchangeRate()
+        this.fetchExchangeRate(false) // 不强制刷新，使用缓存
       })
 
       // 监听模式切换，清除计算结果和错误信息
@@ -55,12 +55,12 @@ document.addEventListener('alpine:init', () => {
     },
 
     // 获取汇率
-    async fetchExchangeRate() {
+    async fetchExchangeRate(forceRefresh = false) {
       this.exchangeRateLoading = true
       this.error = ''
 
       try {
-        const result = await getExchangeRate(this.form.currency)
+        const result = await getExchangeRate(this.form.currency, forceRefresh)
         this.form.exchangeRate = parseFloat(result.rate).toFixed(4)
         this.form.exchangeRateUpdateTime = result.updateTime
       } catch (err) {
@@ -74,7 +74,7 @@ document.addEventListener('alpine:init', () => {
 
     // 刷新汇率
     refreshExchangeRate() {
-      this.fetchExchangeRate()
+      this.fetchExchangeRate(true) // 强制刷新
     },
 
     // 计算结果
