@@ -1,6 +1,13 @@
 import Alpine from 'alpinejs'
 import { calculateResidual } from './utils/calculator'
 import { getExchangeRate } from './utils/currency'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/zh-cn'
+
+// 配置 dayjs
+dayjs.extend(relativeTime)
+dayjs.locale('zh-cn')
 
 // 全局注册 Alpine.js 组件
 document.addEventListener('alpine:init', () => {
@@ -13,6 +20,7 @@ document.addEventListener('alpine:init', () => {
       renewalAmount: '',
       currency: 'USD',
       exchangeRate: '',
+      exchangeRateUpdateTime: null, // 汇率更新时间
       renewalDate: '',
       renewalPeriod: '12', // 月数：1, 3, 6, 12, 24, 36, 60
       tradePrice: '',
@@ -52,10 +60,12 @@ document.addEventListener('alpine:init', () => {
       this.error = ''
 
       try {
-        const rate = await getExchangeRate(this.form.currency)
-        this.form.exchangeRate = parseFloat(rate).toFixed(4)
+        const result = await getExchangeRate(this.form.currency)
+        this.form.exchangeRate = parseFloat(result.rate).toFixed(4)
+        this.form.exchangeRateUpdateTime = result.updateTime
       } catch (err) {
         this.error = '获取汇率失败,请手动输入'
+        this.form.exchangeRateUpdateTime = null
         console.error('汇率获取失败:', err)
       } finally {
         this.exchangeRateLoading = false
@@ -124,6 +134,30 @@ document.addEventListener('alpine:init', () => {
       if (this.mode === 'buy' && parseFloat(this.form.tradePrice) <= 0) {
         throw new Error('交易价格必须大于0')
       }
+    },
+
+    // 格式化汇率更新时间为相对时间
+    get formattedExchangeRateTime() {
+      if (!this.form.exchangeRateUpdateTime) {
+        return null
+      }
+
+      const updateTime = dayjs(this.form.exchangeRateUpdateTime)
+      const now = dayjs()
+      const hoursDiff = now.diff(updateTime, 'hour')
+
+      // 如果在24小时内，显示相对时间
+      if (hoursDiff < 24 && updateTime.isSame(now, 'day')) {
+        return updateTime.fromNow() // "3小时前"、"刚刚"
+      }
+
+      // 如果是昨天
+      if (updateTime.isSame(now.subtract(1, 'day'), 'day')) {
+        return '昨天'
+      }
+
+      // 否则显示日期
+      return updateTime.format('YYYY-MM-DD')
     }
   }))
 })

@@ -4,12 +4,15 @@ const API_BASE_URL = 'https://api.exchangerate-api.com/v4/latest'
 /**
  * 获取汇率
  * @param {string} currency - 源币种代码 (如 'USD')
- * @returns {Promise<number>} CNY 汇率
+ * @returns {Promise<{rate: number, updateTime: string|null}>} 汇率和更新时间
  */
 export async function getExchangeRate(currency) {
   // 如果是 CNY,直接返回 1
   if (currency === 'CNY') {
-    return 1
+    return {
+      rate: 1,
+      updateTime: new Date().toISOString().split('T')[0]
+    }
   }
 
   console.log(`[汇率] 正在获取 ${currency} 汇率...`)
@@ -36,7 +39,10 @@ export async function getExchangeRate(currency) {
 
     console.log(`[汇率] 获取成功: ${currency} = ${rate} CNY`)
 
-    return rate
+    return {
+      rate: rate,
+      updateTime: data.date || data.time_last_updated || null
+    }
 
   } catch (error) {
     console.error(`[汇率] 主API失败:`, error)
@@ -60,7 +66,10 @@ async function getFallbackRate(currency) {
       // CNY 到目标币种，需要取倒数得到目标币种到 CNY
       const rate = 1 / data.rates[currency]
       console.log(`[汇率] 备用API成功: ${currency} = ${rate} CNY`)
-      return rate
+      return {
+        rate: rate,
+        updateTime: data.date || new Date().toISOString().split('T')[0]
+      }
     }
 
     throw new Error('备用 API 也失败了')
@@ -68,9 +77,9 @@ async function getFallbackRate(currency) {
   } catch (error) {
     console.error(`[汇率] 备用API失败:`, error)
     // 如果所有 API 都失败,返回默认汇率
-    const defaultRate = getDefaultRate(currency)
-    console.warn(`[汇率] 使用默认值: ${currency} = ${defaultRate} CNY`)
-    return defaultRate
+    const defaultResult = getDefaultRate(currency)
+    console.warn(`[汇率] 使用默认值: ${currency} = ${defaultResult.rate} CNY`)
+    return defaultResult
   }
 }
 
@@ -86,5 +95,8 @@ function getDefaultRate(currency) {
     'HKD': 0.92
   }
 
-  return defaultRates[currency] || 1
+  return {
+    rate: defaultRates[currency] || 1,
+    updateTime: null
+  }
 }
