@@ -98,7 +98,7 @@ async function getFallbackRate(currency) {
   console.log(`[汇率] 尝试备用API...`)
   try {
     // 备用 API 获取所有支持币种的汇率
-    const symbols = ['USD', 'EUR', 'GBP', 'JPY', 'HKD'].join(',')
+    const symbols = ['USD', 'EUR', 'GBP', 'JPY', 'HKD', 'CAD'].join(',')
     const response = await fetch(
       `https://api.exchangerate.host/latest?base=CNY&symbols=${symbols}`
     )
@@ -144,7 +144,8 @@ function getDefaultRate(currency) {
     'EUR': 7.8,
     'GBP': 9.1,
     'JPY': 0.048,
-    'HKD': 0.92
+    'HKD': 0.92,
+    'CAD': 5.2
   }
 
   return {
