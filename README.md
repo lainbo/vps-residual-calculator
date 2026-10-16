@@ -13,13 +13,13 @@
 - **框架**: [Vite](https://vitejs.dev/) - 快速的构建工具
 - **UI 框架**: [Alpine.js](https://alpinejs.dev/) - 轻量级响应式框架
 - **样式**: [Tailwind CSS](https://tailwindcss.com/) - 实用优先的 CSS 框架
-- **精确计算**: [Decimal.js](https://github.com/MikeMcl/decimal.js/) - 高精度数值计算
+- **精确计算**: [decimalish](https://decimali.sh/) - 高精度十进制数值计算
 
 ## 📦 本地开发
 
 ### 前置要求
 
-- Node.js >= 16
+- Node.js 20.19+ 或 22.12+（Vite 7 的要求）
 - pnpm (推荐) 或 npm
 
 ### 安装依赖

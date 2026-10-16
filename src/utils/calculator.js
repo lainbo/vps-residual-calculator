@@ -1,85 +1,50 @@
-// 只导入需要的函数,实现 tree shaking
-import {
-  decimal,
-  mul,
-  div,
-  sub,
-  add,
-  round
-} from 'decimalish'
+import { mul, div, sub, add, round } from 'decimalish'
 import dayjs from 'dayjs'
 
+const toMoney = (value) => round(value, { places: 2 })
+
 /**
- * 计算剩余价值
- * @param {Object} params - 计算参数
- * @param {string|number} params.renewalAmount - 续费金额
- * @param {string|number} params.exchangeRate - 汇率
- * @param {Date} params.renewalDate - 续费日期
- * @param {string|number} params.renewalPeriod - 续费周期(月数)
- * @param {Date} params.tradeDate - 交易日期
- * @param {string} params.mode - 模式: 'buy' 或 'sell'
- * @param {string|number} params.tradePrice - 交易价格(购买模式)
- * @param {string|number} params.expectedPremium - 期望溢价(出售模式)
- * @returns {Object} 计算结果
+ * 按日均价格计算剩余价值
+ * @param {Object} params - 表单中的原始字符串值
+ * @param {string} params.renewalAmount - 每个付款周期的续费金额（原币种）
+ * @param {string} params.exchangeRate - 1 单位原币种兑换的人民币数额
+ * @param {string} params.renewalDate - 到期日期 YYYY-MM-DD
+ * @param {string} params.renewalPeriod - 付款周期（月数）
+ * @param {string} params.tradeDate - 交易日期 YYYY-MM-DD
+ * @param {'buy'|'sell'} params.mode - 购买模式计算溢价，出售模式计算总价
+ * @param {string} params.tradePrice - 对方出价（CNY），购买模式使用
+ * @param {string} params.expectedPremium - 期望溢价（CNY），出售模式使用
+ * @returns {{dailyPrice: string, remainingDays: number, residualValue: string, premium?: string, suggestedPrice?: string}}
  */
-export function calculateResidual(params) {
-  const {
-    renewalAmount,
-    exchangeRate,
-    renewalDate,
-    renewalPeriod,
-    tradeDate,
-    mode,
-    tradePrice,
-    expectedPremium
-  } = params
+export function calculateResidual({
+  renewalAmount,
+  exchangeRate,
+  renewalDate,
+  renewalPeriod,
+  tradeDate,
+  mode,
+  tradePrice,
+  expectedPremium
+}) {
+  const expiry = dayjs(renewalDate)
+  // 从到期日反推周期起始日，按实际天数计算（各月天数不同）
+  const periodDays = expiry.diff(expiry.subtract(Number(renewalPeriod), 'month'), 'day')
+  const remainingDays = expiry.diff(dayjs(tradeDate), 'day')
 
-  try {
-    // 1. 计算总周期天数
-    const months = parseInt(renewalPeriod)
-    // 使用 dayjs 从到期日期反推周期开始日期
-    const periodStartDate = dayjs(renewalDate).subtract(months, 'month')
-    // 计算实际天数差
-    const totalDays = decimal(dayjs(renewalDate).diff(periodStartDate, 'day'))
+  const dailyPrice = div(mul(renewalAmount, exchangeRate), periodDays)
+  const residualValue = mul(dailyPrice, remainingDays)
 
-    // 2. 计算续费金额的人民币价值
-    const renewalAmountDecimal = decimal(parseFloat(renewalAmount))
-    const exchangeRateDecimal = decimal(parseFloat(exchangeRate))
-    const renewalAmountCNY = mul(renewalAmountDecimal, exchangeRateDecimal)
-
-    // 3. 计算日均价格
-    const dailyPrice = div(renewalAmountCNY, totalDays)
-
-    // 4. 计算剩余天数
-    const timeDiff = renewalDate.getTime() - tradeDate.getTime()
-    const remainingDays = decimal(Math.ceil(timeDiff / (1000 * 60 * 60 * 24)))
-
-    // 5. 计算剩余价值
-    const residualValue = mul(dailyPrice, remainingDays)
-
-    // 6. 根据模式计算不同结果
-    let result = {
-      totalDays: String(totalDays),
-      dailyPrice: String(round(dailyPrice, { places: 2 })),
-      remainingDays: String(remainingDays),
-      residualValue: String(round(residualValue, { places: 2 }))
-    }
-
-    if (mode === 'buy') {
-      // 购买模式: 计算溢价
-      const tradePriceDecimal = decimal(parseFloat(tradePrice))
-      const premium = sub(tradePriceDecimal, residualValue)
-      result.premium = String(round(premium, { places: 2 }))
-    } else {
-      // 出售模式: 计算建议售价
-      const expectedPremiumDecimal = decimal(parseFloat(expectedPremium))
-      const suggestedPrice = add(residualValue, expectedPremiumDecimal)
-      result.suggestedPrice = String(round(suggestedPrice, { places: 2 }))
-    }
-
-    return result
-
-  } catch (error) {
-    throw new Error(`计算错误: ${error.message}`)
+  const result = {
+    dailyPrice: toMoney(dailyPrice),
+    remainingDays,
+    residualValue: toMoney(residualValue)
   }
+
+  if (mode === 'buy') {
+    result.premium = toMoney(sub(tradePrice, residualValue))
+  } else {
+    result.suggestedPrice = toMoney(add(residualValue, expectedPremium))
+  }
+
+  return result
 }

@@ -1,28 +1,19 @@
 import { defineConfig } from 'vite'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  esbuild: {
+    // 生产构建移除 console 和 debugger
+    drop: command === 'build' ? ['console', 'debugger'] : []
+  },
   build: {
-    // 启用代码分割和 tree shaking
-    minify: 'esbuild',
-    esbuild: {
-      drop: ['console', 'debugger'], // 生产环境移除 console 和 debugger
-    },
     rollupOptions: {
       output: {
-        // 手动分割代码块
         manualChunks: {
-          'alpine': ['alpinejs'],
-          'decimal': ['decimalish']
+          alpine: ['alpinejs'],
+          decimal: ['decimalish']
         }
       }
     },
-    // 设置 chunk 大小警告阈值
-    chunkSizeWarningLimit: 100,
-    // CSS 代码分割
-    cssCodeSplit: true
-  },
-  // 优化依赖预构建
-  optimizeDeps: {
-    include: ['alpinejs', 'decimalish']
+    chunkSizeWarningLimit: 100
   }
-})
+}))

@@ -1,11 +1,13 @@
 import Alpine from 'alpinejs'
-import { calculateResidual } from './utils/calculator'
-import { getExchangeRate } from './utils/currency'
 import dayjs from 'dayjs'
+import { calculateResidual } from './utils/calculator'
+import { CURRENCIES, getExchangeRate } from './utils/currency'
 
 // 全局注册 Alpine.js 组件
 document.addEventListener('alpine:init', () => {
   Alpine.data('calculator', () => ({
+    currencies: CURRENCIES,
+
     // 当前模式: 'buy' 或 'sell'
     mode: 'buy',
 
@@ -14,13 +16,16 @@ document.addEventListener('alpine:init', () => {
       renewalAmount: '',
       currency: 'USD',
       exchangeRate: '',
-      exchangeRateUpdateTime: null, // 汇率更新时间
       renewalDate: '',
-      renewalPeriod: '12', // 月数：1, 3, 6, 12, 24, 36, 60
+      renewalPeriod: '12', // 月数
       tradePrice: '',
       expectedPremium: '',
-      tradeDate: new Date().toISOString().split('T')[0]
+      tradeDate: dayjs().format('YYYY-MM-DD')
     },
+
+    // 当前汇率所属汇率表的更新日期
+    exchangeRateUpdateTime: null,
+    exchangeRateLoading: false,
 
     // 计算结果
     result: null,
@@ -28,111 +33,66 @@ document.addEventListener('alpine:init', () => {
     // 错误信息
     error: '',
 
-    // 汇率加载状态
-    exchangeRateLoading: false,
+    init() {
+      this.$watch('form.currency', () => this.fetchExchangeRate())
 
-    // 初始化
-    async init() {
-      // 自动获取汇率
-      await this.fetchExchangeRate()
-
-      // 监听币种变化
-      this.$watch('form.currency', () => {
-        this.fetchExchangeRate(false) // 不强制刷新，使用缓存
-      })
-
-      // 监听模式切换，清除计算结果和错误信息
+      // 切换模式时清除计算结果和错误信息
       this.$watch('mode', () => {
         this.result = null
         this.error = ''
       })
+
+      this.fetchExchangeRate()
     },
 
-    // 获取汇率
     async fetchExchangeRate(forceRefresh = false) {
+      const { currency } = this.form
       this.exchangeRateLoading = true
       this.error = ''
 
-      try {
-        const result = await getExchangeRate(this.form.currency, forceRefresh)
-        this.form.exchangeRate = parseFloat(result.rate).toFixed(4)
-        this.form.exchangeRateUpdateTime = result.updateTime
-      } catch (err) {
-        this.error = '获取汇率失败,请手动输入'
-        this.form.exchangeRateUpdateTime = null
-        console.error('汇率获取失败:', err)
-      } finally {
-        this.exchangeRateLoading = false
+      const fetched = await getExchangeRate(currency, forceRefresh).catch((error) => {
+        console.error('[汇率] 获取失败:', error)
+        return null
+      })
+      // 请求期间已切换到其他币种时，丢弃这次结果
+      if (currency !== this.form.currency) return
+      this.exchangeRateLoading = false
+
+      if (fetched) {
+        this.form.exchangeRate = fetched.rate.toFixed(4)
+        this.exchangeRateUpdateTime = fetched.updateTime
+      } else if (forceRefresh) {
+        // 刷新失败时保留输入框里原有的汇率
+        this.error = '刷新汇率失败，汇率保持不变'
+      } else {
+        // 还没有成功获取过汇率表；输入框里如有数值，属于切换前的币种，需要清空
+        this.form.exchangeRate = ''
+        this.exchangeRateUpdateTime = null
+        this.error = '获取汇率失败，请手动输入'
       }
     },
 
-    // 刷新汇率
-    refreshExchangeRate() {
-      this.fetchExchangeRate(true) // 强制刷新
-    },
-
-    // 计算结果
     calculate() {
-      this.error = ''
       this.result = null
+      this.error = this.validateForm()
+      if (this.error) return
 
-      try {
-        // 验证表单
-        this.validateForm()
-
-        // 准备计算参数
-        const params = {
-          renewalAmount: this.form.renewalAmount,
-          exchangeRate: this.form.exchangeRate,
-          renewalDate: new Date(this.form.renewalDate),
-          renewalPeriod: this.form.renewalPeriod,
-          tradeDate: new Date(this.form.tradeDate),
-          mode: this.mode,
-          tradePrice: this.mode === 'buy' ? this.form.tradePrice : null,
-          expectedPremium: this.mode === 'sell' ? this.form.expectedPremium : null
-        }
-
-        // 执行计算
-        this.result = calculateResidual(params)
-
-      } catch (err) {
-        this.error = err.message
-        console.error('计算错误:', err)
-      }
+      this.result = calculateResidual({ ...this.form, mode: this.mode })
     },
 
-    // 表单验证
+    // 返回第一条校验错误，全部通过时返回空字符串
     validateForm() {
-      // 验证续费周期
-      if (!this.form.renewalPeriod || parseInt(this.form.renewalPeriod) <= 0) {
-        throw new Error('请选择续费周期')
-      }
+      const { renewalAmount, exchangeRate, renewalDate, tradeDate, tradePrice } = this.form
 
-      // 验证日期
-      const renewalDate = new Date(this.form.renewalDate)
-      const tradeDate = new Date(this.form.tradeDate)
-
-      if (tradeDate >= renewalDate) {
-        throw new Error('交易日期必须早于续费日期')
-      }
-
-      // 验证金额
-      if (parseFloat(this.form.renewalAmount) <= 0) {
-        throw new Error('续费金额必须大于0')
-      }
-
-      if (parseFloat(this.form.exchangeRate) <= 0) {
-        throw new Error('汇率必须大于0')
-      }
-
-      if (this.mode === 'buy' && parseFloat(this.form.tradePrice) <= 0) {
-        throw new Error('交易价格必须大于0')
-      }
+      if (!dayjs(tradeDate).isBefore(renewalDate)) return '交易日期必须早于到期时间'
+      if (Number(renewalAmount) <= 0) return '续费金额必须大于0'
+      if (Number(exchangeRate) <= 0) return '汇率必须大于0'
+      if (this.mode === 'buy' && Number(tradePrice) <= 0) return '对方出价必须大于0'
+      return ''
     },
 
-    // 格式化汇率更新时间
-    get formattedExchangeRateTime() {
-      return this.form.exchangeRateUpdateTime || null
+    get premiumIsPositive() {
+      return Number(this.result?.premium) > 0
     }
   }))
 })

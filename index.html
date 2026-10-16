@@ -10,7 +10,7 @@
 </head>
 
 <body class="min-h-screen py-8 px-4 bg-white">
-  <div class="child-element"></div>
+  <div class="dot-background"></div>
   <div id="app" x-data="calculator()" x-cloak class="max-w-2xl mx-auto">
     <!-- Header -->
     <header class="text-center mb-8">
@@ -35,29 +35,21 @@
     <div class="bg-white rounded-xl border border-[#eee] shadow-xl p-6 md:p-8">
       <!-- Form Fields -->
       <form @submit.prevent="calculate" class="space-y-6">
-
-
         <!-- 汇率 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
             汇率 (1 <span x-text="form.currency"></span> = ? CNY)
             <span x-show="exchangeRateLoading" class="text-gray-600 text-xs ml-2">获取中...</span>
-            <!-- 显示更新时间 -->
-            <span x-show="!exchangeRateLoading && form.exchangeRateUpdateTime"
+            <span x-show="!exchangeRateLoading && exchangeRateUpdateTime"
                   class="text-gray-500 text-xs ml-2"
-                  x-text="'(更新: ' + formattedExchangeRateTime + ')'"></span>
-            <!-- 默认汇率提示 -->
-            <span x-show="!exchangeRateLoading && !form.exchangeRateUpdateTime && form.exchangeRate"
-                  class="text-orange-600 text-xs ml-2">
-              (使用默认汇率)
-            </span>
+                  x-text="'(更新: ' + exchangeRateUpdateTime + ')'"></span>
           </label>
           <div class="flex gap-2">
             <input type="number" x-model="form.exchangeRate" step="0.0001" required
-              @blur="form.exchangeRate = parseFloat(form.exchangeRate || 0).toFixed(4)"
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              @blur="if (form.exchangeRate) form.exchangeRate = parseFloat(form.exchangeRate).toFixed(4)"
+              class="input-field flex-1"
               placeholder="汇率会自动获取,也可手动调整">
-            <button type="button" @click="refreshExchangeRate()" :disabled="exchangeRateLoading"
+            <button type="button" @click="fetchExchangeRate(true)" :disabled="exchangeRateLoading"
               class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="刷新汇率">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600"
@@ -74,35 +66,28 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">续费金额</label>
             <input type="number" x-model="form.renewalAmount" step="0.01" required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              class="input-field"
               placeholder="输入续费金额">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">币种</label>
-            <select x-model="form.currency"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent">
-              <option value="USD">USD - 美元</option>
-              <option value="EUR">EUR - 欧元</option>
-              <option value="GBP">GBP - 英镑</option>
-              <option value="JPY">JPY - 日元</option>
-              <option value="HKD">HKD - 港币</option>
-              <option value="CAD">CAD - 加拿大元</option>
-              <option value="CNY">CNY - 人民币</option>
+            <select x-model="form.currency" class="input-field">
+              <template x-for="{ code, name } in currencies" :key="code">
+                <option :value="code" x-text="`${code} - ${name}`"></option>
+              </template>
             </select>
           </div>
         </div>
 
-        <!-- 续费日期与周期 -->
+        <!-- 到期时间与付款周期 -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">到期时间</label>
-            <input type="date" x-model="form.renewalDate" required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+            <input type="date" x-model="form.renewalDate" required class="input-field">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">付款周期</label>
-            <select x-model="form.renewalPeriod" required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+            <select x-model="form.renewalPeriod" required class="input-field">
               <option value="1">1个月</option>
               <option value="3">3个月</option>
               <option value="6">6个月</option>
@@ -123,7 +108,7 @@
             x-transition:leave-end="opacity-0" class="absolute inset-0">
             <label class="block text-sm font-medium text-gray-700 mb-2">对方出价 (CNY)</label>
             <input type="number" x-model="form.tradePrice" step="0.01" :required="mode === 'buy'"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow"
+              class="input-field transition-shadow"
               placeholder="输入对方出价是多少">
           </div>
 
@@ -134,7 +119,7 @@
             x-transition:leave-end="opacity-0" class="absolute inset-0">
             <label class="block text-sm font-medium text-gray-700 mb-2">溢价 (CNY)</label>
             <input type="number" x-model="form.expectedPremium" step="0.01" :required="mode === 'sell'"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow"
+              class="input-field transition-shadow"
               placeholder="输入你想要溢价多少钱">
           </div>
         </div>
@@ -142,8 +127,7 @@
         <!-- 交易日期 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">交易日期</label>
-          <input type="date" x-model="form.tradeDate" required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+          <input type="date" x-model="form.tradeDate" required class="input-field">
         </div>
 
         <!-- Error Message -->
@@ -171,13 +155,14 @@
             <p class="text-sm text-gray-600 mb-1">剩余价值</p>
             <p class="text-2xl font-bold text-gray-900" x-text="result ? '¥ ' + result.residualValue : ''"></p>
           </div>
-          <div class="bg-gray-50 p-4 rounded-lg">
-            <p class="text-sm text-gray-600 mb-1"
-              x-text="mode === 'buy' ? '溢价（正数代表你要多付的钱，负数代表对方出价低于剩余价格）' : '总价（剩余价值+溢价）'"></p>
-            <p class="text-2xl font-bold"
-              :class="result && mode === 'buy' ? (parseFloat(result.premium) > 0 ? 'text-red-600' : 'text-green-600') : 'text-gray-900'"
-              x-text="result ? (mode === 'buy' ? (parseFloat(result.premium) > 0 ? '+¥ ' : '¥ ') + result.premium : '¥ ' + result.suggestedPrice) : ''">
-            </p>
+          <div x-show="mode === 'buy'" class="bg-gray-50 p-4 rounded-lg">
+            <p class="text-sm text-gray-600 mb-1">溢价（正数代表你要多付的钱，负数代表对方出价低于剩余价格）</p>
+            <p class="text-2xl font-bold" :class="premiumIsPositive ? 'text-red-600' : 'text-green-600'"
+              x-text="result?.premium ? (premiumIsPositive ? '+¥ ' : '¥ ') + result.premium : ''"></p>
+          </div>
+          <div x-show="mode === 'sell'" class="bg-gray-50 p-4 rounded-lg">
+            <p class="text-sm text-gray-600 mb-1">总价（剩余价值+溢价）</p>
+            <p class="text-2xl font-bold text-gray-900" x-text="result?.suggestedPrice ? '¥ ' + result.suggestedPrice : ''"></p>
           </div>
         </div>
 
